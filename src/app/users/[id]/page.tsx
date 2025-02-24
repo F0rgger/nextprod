@@ -4,53 +4,59 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchUserById, fetchUserRecipes } from "@/lib/api";
 import Link from "next/link";
+import type {Recipe, User} from "@/types/types";  // Убедись, что путь верный
 
-interface User {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    image?: string;
-}
 
-interface Recipe {
-    id: number;
-    name: string;
-}
 
 export default function UserPage() {
     const params = useParams();
-    const userId = Array.isArray(params.id) ? params.id[0] : params.id;
-    const router = useRouter();
+    const userId = Array.isArray(params.id) ? params.id[0] : params.id ?? "";
 
-    const [user, setUser] = useState<User | null>(null);
-    const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
+    const [state, setState] = useState<{
+        user: User | null;
+        recipes: Recipe[];
+        loading: boolean;
+        error: string | null;
+    }>({
+        user: null,
+        recipes: [],
+        loading: true,
+        error: null,
+    });
 
     useEffect(() => {
-        async function loadData() {
-            if (!userId) return;
-            try {
-                const userData: User = await fetchUserById(userId);
-                const recipesData: Recipe[] = await fetchUserRecipes(userId);
+        if (!userId) {
+            setState((prev) => ({ ...prev, loading: false, error: "Не указан ID пользователя" }));
+            return;
+        }
 
-                setUser(userData);
-                setRecipes(recipesData || []);
+        async function loadData() {
+            try {
+                const userData = await fetchUserById(userId);
+                console.log("User data:", userData); // Проверка API
+
+                if (!userData.email || !userData.phone) {
+                    console.warn("API не возвращает email или phone");
+                }
+
+                setState({
+                    user: userData,
+                    recipes: (await fetchUserRecipes(userId)) ?? [],
+                    loading: false,
+                    error: null,
+                });
             } catch (err) {
                 console.error("Ошибка загрузки данных:", err);
-                setError("Ошибка загрузки данных");
-            } finally {
-                setLoading(false);
+                setState({ user: null, recipes: [], loading: false, error: "Ошибка загрузки данных" });
             }
         }
 
         loadData();
     }, [userId]);
 
-    if (loading) return <p className="text-center mt-10 text-gray-500">Загрузка...</p>;
-    if (error) return <p className="text-red-500 text-center mt-10">{error}</p>;
+    if (state.loading) return <p className="text-center mt-10 text-gray-500">Загрузка...</p>;
+    if (state.error) return <p className="text-red-500 text-center mt-10">{state.error}</p>;
 
     return (
         <div className="max-w-3xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg border border-gray-200">
@@ -62,26 +68,23 @@ export default function UserPage() {
             </button>
 
             <div className="bg-gray-100 p-6 rounded-lg shadow-md border flex flex-col items-center">
-
                 <img
-                    src={user?.image || "/placeholder-avatar.png"}
+                    src={state.user?.image || "/placeholder-avatar.png"}
                     alt="Аватар пользователя"
                     className="w-32 h-32 rounded-full shadow-lg border"
                 />
-
                 <h1 className="text-3xl font-bold text-gray-800 mt-4">
-                    {user?.firstName} {user?.lastName}
+                    {state.user?.firstName} {state.user?.lastName}
                 </h1>
-                <p className="text-gray-600 mt-2"><span className="font-semibold">📧 Email:</span> {user?.email}</p>
-                <p className="text-gray-600 mt-1"><span className="font-semibold">📞 Телефон:</span> {user?.phone}</p>
+                <p className="text-gray-600 mt-2"><span className="font-semibold">📧 Email:</span> {state.user?.email || "Не указан"}</p>
+                <p className="text-gray-600 mt-1"><span className="font-semibold">📞 Телефон:</span> {state.user?.phone || "Не указан"}</p>
             </div>
-
 
             <h2 className="text-2xl font-semibold mt-8 text-black">Рецепты пользователя:</h2>
 
-            {recipes.length > 0 ? (
+            {state.recipes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    {recipes.map((recipe) => (
+                    {state.recipes.map((recipe) => (
                         <Link
                             key={recipe.id}
                             href={`/recipes/${recipe.id}`}

@@ -1,24 +1,10 @@
-import {fetchRecipeById, fetchUserById} from "@/lib/api";
+import { fetchRecipeById, fetchUserById } from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
+import { Recipe, User } from "@/types/types";
 
-interface Recipe {
-    id: string;
-    name: string;
-    description: string;
-    image?: string;
-    ingredients?: string[];
-    userId?: string;
-}
-
-interface User {
-    id: string;
-    firstName: string;
-    lastName: string;
-}
-
-export default async function RecipePage({params}: { params: { id: string } }) {
-    if (!params?.id) {
+export default async function RecipePage({ params }: { params: { id?: string } }) {
+    if (!params || !params.id) {
         return <p className="text-red-500 text-center mt-10">Ошибка: нет параметра ID</p>;
     }
 
@@ -34,30 +20,27 @@ export default async function RecipePage({params}: { params: { id: string } }) {
         }
 
         return (
-            <div className="max-w-3xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
+            <div className="max-w-3xl mx-auto mt-10 p-8 bg-white shadow-lg rounded-2xl border border-gray-300 ">
                 {recipe.image && (
                     <div className="flex justify-center mb-4">
                         <Image
                             src={recipe.image}
                             alt={recipe.name}
-                            width={250}
-                            height={250}
-                            className="rounded-lg"
+                            width={200}
+                            height={200}
+                            className="rounded-lg object-cover"
                         />
                     </div>
                 )}
 
-
                 <h1 className="text-3xl font-bold text-black mb-4">{recipe.name}</h1>
 
-
                 <p className="text-gray-700 mb-4">{recipe.description}</p>
-
 
                 {recipe.ingredients?.length ? (
                     <>
                         <h2 className="text-xl font-semibold text-black mt-6">Ингредиенты:</h2>
-                        <ul className="list-disc list-inside text-gray-600">
+                        <ul className="list-disc list-inside text-black">
                             {recipe.ingredients.map((ingredient, index) => (
                                 <li key={index}>{ingredient}</li>
                             ))}
@@ -66,7 +49,6 @@ export default async function RecipePage({params}: { params: { id: string } }) {
                 ) : (
                     <p className="text-gray-500 mt-2">Нет информации об ингредиентах</p>
                 )}
-
 
                 {author ? (
                     <div className="mt-6 p-4 bg-gray-100 rounded-lg">
@@ -80,7 +62,6 @@ export default async function RecipePage({params}: { params: { id: string } }) {
                 ) : (
                     <p className="text-gray-500 mt-2">Автор неизвестен</p>
                 )}
-
 
                 <div className="mt-6 text-center">
                     <Link href="/recipes">

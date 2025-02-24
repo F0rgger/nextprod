@@ -8,10 +8,13 @@ import { useState, useEffect } from "react";
 export default function Navbar() {
     const { user, logout } = useAuthStore();
     const router = useRouter();
+    const [isMounted, setIsMounted] = useState(false);
     const [isDark, setIsDark] = useState(false);
     const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
+    // Фикс: ждем, пока компонент смонтируется
     useEffect(() => {
+        setIsMounted(true);
         if (typeof window !== "undefined") {
             const savedTheme = localStorage.getItem("theme") === "dark";
             setIsDark(savedTheme);
@@ -29,6 +32,11 @@ export default function Navbar() {
         });
     };
 
+    // Пока компонент не смонтирован, не рендерим разметку, зависящую от `user`
+    if (!isMounted) {
+        return null;
+    }
+
     return (
         <nav className="bg-gray-800 text-white p-4">
             <div className="container mx-auto flex justify-between items-center">
@@ -45,15 +53,12 @@ export default function Navbar() {
                     )}
 
                     {user ? (
-                        <>
-                            <span className="text-yellow-400">Привет, {user.username}!</span>
-                            <button
-                                onClick={() => { logout(); router.push("/auth/login"); }}
-                                className="bg-red-500 px-4 py-1 rounded"
-                            >
-                                Выйти
-                            </button>
-                        </>
+                        <button
+                            onClick={() => { logout(); router.push("/auth/login"); }}
+                            className="bg-red-500 px-4 py-1 rounded"
+                        >
+                            Выйти
+                        </button>
                     ) : (
                         <Link href="/auth/login" className="bg-blue-500 px-4 py-1 rounded">
                             Войти

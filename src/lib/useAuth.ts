@@ -7,6 +7,7 @@ export const useAuth = () => {
     const signIn = async (email: string, password: string) => {
         try {
             const userData = await apiLogin(email, password);
+            // @ts-ignore
             login(userData);
             return true;
         } catch (error) {

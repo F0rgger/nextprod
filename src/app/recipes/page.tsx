@@ -1,117 +1,94 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useRecipes } from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
 import Link from "next/link";
+import { Recipe } from "@/types/types";
+import {filterRecipes} from "@/lib/utils";
 
 export default function RecipesPage() {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
-    const limit = 10;
-    const router = useRouter();
-    const { user } = useAuthStore();
-
-    useEffect(() => {
-        if (!user) {
-            router.push("/auth/login");
-        }
-    }, [user, router]);
+    const limit = 5;
 
     const { data, isLoading, error } = useRecipes(page, limit);
 
-    if (!user) return <p className="text-center mt-10">Проверка доступа...</p>;
-    if (isLoading) return <p className="text-center mt-10">Загрузка...</p>;
-    if (error) return <p className="text-red-500 text-center">Ошибка: {error.message}</p>;
+    const recipes: Recipe[] = data?.recipes || [];
+    const filteredRecipes = search ? filterRecipes(recipes, search) : recipes;
 
-    const totalPages = Math.ceil(data.total / limit);
+    const isSearchActive = search.length > 0;
 
-
-    const filteredRecipes = data.recipes.filter((recipe: any) => {
-        const searchLower = search.toLowerCase();
-        return (
-            recipe.name.toLowerCase().includes(searchLower) ||
-            (recipe.tags && recipe.tags.some((tag: string) => tag.toLowerCase().includes(searchLower)))
-        );
-    });
-
-
-    const handleTagClick = (tag: string) => {
-        setSearch(tag);
-    };
+    if (isLoading) return <p className="text-center mt-10 text-gray-500">Загрузка...</p>;
+    if (error) return <p className="text-red-500 text-center mt-10">Ошибка загрузки</p>;
 
     return (
-        <div className="max-w-4xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
-            <h1 className="text-3xl font-bold mb-6 text-center text-black">📜 Список рецептов</h1>
+        <div className="max-w-2xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg border border-gray-200">
+            <h1 className="text-3xl font-bold mb-4 text-gray-800 text-center">Список рецептов</h1>
 
 
-            <input
-                type="text"
-                placeholder="🔍 Поиск по названию или тегу..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full p-3 mb-4 border rounded-lg shadow-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="mb-4">
+                <label htmlFor="search" className="block text-gray-700 font-semibold mb-2">
+                </label>
+                <input
+                    id="search"
+                    type="text"
+                    placeholder="Введите название или тег..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full p-2 border rounded-lg text-black"
+                />
+            </div>
 
-            <ul className="space-y-4">
+
+            <div className="flex flex-col gap-4">
                 {filteredRecipes.length > 0 ? (
-                    filteredRecipes.map((recipe: any) => (
-                        <li key={recipe.id} className="p-4 bg-gray-100 shadow-md rounded-lg flex items-center space-x-4">
-                            {recipe.image && (
-                                <img src={recipe.image} alt={recipe.name} className="w-16 h-16 rounded-lg shadow-md" />
-                            )}
-                            <div>
-                                <Link href={`/recipes/${recipe.id}`} className="text-blue-600 hover:underline text-lg font-semibold">
-                                    {recipe.name}
-                                </Link>
-                                {recipe.tags && (
-                                    <div className="mt-1 flex flex-wrap gap-2">
-                                        {recipe.tags.map((tag: string) => (
-                                            <button
-                                                key={tag}
-                                                onClick={() => handleTagClick(tag)}
-                                                className="text-sm bg-blue-100 text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-200 transition"
-                                            >
-                                                #{tag}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                    filteredRecipes.map((recipe) => (
+                        <Link
+                            key={recipe.id}
+                            href={`/recipes/${recipe.id}`}
+                            className="p-4 bg-white border border-gray-200 rounded-lg shadow-md transition hover:shadow-lg hover:bg-gray-50 flex flex-col"
+                        >
+                            <img
+                                src={recipe.image || "/placeholder-recipe.png"}
+                                alt={recipe.name}
+                                className="w-full h-48 object-cover rounded-lg shadow-md border"
+                            />
+                            <h3 className="text-lg font-semibold text-gray-800 mt-2">{recipe.name}</h3>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {recipe.tags.map((tag) => (
+                                    <span key={tag} className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg cursor-pointer hover:bg-gray-300 transition">
+                                        #{tag}
+                                    </span>
+                                ))}
                             </div>
-                        </li>
+                        </Link>
                     ))
                 ) : (
-                    <p className="text-gray-500 text-center">Рецепты не найдены</p>
+                    <p className="text-gray-500 text-center">Рецепты не найдены.</p>
                 )}
-            </ul>
-
-
-            <div className="flex justify-center items-center mt-6 gap-2">
-                <button
-                    onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={page === 1}
-                    className={`px-4 py-2 rounded-lg transition-all ${
-                        page === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-700"
-                    }`}
-                >
-                    Назад
-                </button>
-
-                <span className="text-lg font-semibold text-black">
-                    {page} / {totalPages}
-                </span>
-
-                <button
-                    onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={page >= totalPages}
-                    className={`px-4 py-2 rounded-lg transition-all ${
-                        page >= totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-700"
-                    }`}
-                >
-                    Вперед
-                </button>
             </div>
+
+            {!isSearchActive && (
+                <div className="flex justify-between items-center mt-6">
+                    <button
+                        disabled={page === 1}
+                        onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                        className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow-md transition hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                        ◀ Предыдущая
+                    </button>
+
+                    <span className="text-gray-700">Страница {page}</span>
+
+                    <button
+                        disabled={recipes.length < limit}
+                        onClick={() => setPage((prev) => prev + 1)}
+                        className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow-md transition hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                        Следующая ▶
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
